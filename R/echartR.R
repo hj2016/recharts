@@ -547,23 +547,44 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     loadpkg("reshape2")
     loadpkg("recharts","yihui/recharts")
     
+    #-----transform var to class(name)-----------
+    x <- substitute(x); y <- substitute(y); z <- substitute(z); x1<- substitute(x1)
+    series <- substitute(series); weight <- substitute(weight)
+    xcoord <- substitute(xcoord); ycoord <- substitute(ycoord)
+    xcoord1 <- substitute(xcoord1); ycoord1 <- substitute(ycoord1)
+    vArgs <- list(x=x,y=y,z=z,x1=x1,series=series,weight=weight,xcoord=xcoord,
+                    ycoord=ycoord,xcoord1=xcoord1,ycoord1=ycoord1)
+    for (v in names(vArgs)){
+        if (inherits(vArgs[[v]],"name")) vArgs[[v]] <- deparse(vArgs[[v]])
+        else if (inherits(vArgs[[v]],"call")) 
+            vArgs[[v]] <- gsub("^.*~(.+)$","\\1",deparse(vArgs[[v]]))
+    }
+    
     #-------if there is timeline, loop over z---------
     Data <- data
     MarkLine <- markLine
     MarkPoint <- markPoint
-    if (!is.null(z)) {
-        zvar <- substr(deparse(z),2,nchar(deparse(z)))
-        z <- evalFormula(z,data)
+    if (!is.null(substitute(z))) {
+        #zvar <- substr(deparse(z),2,nchar(deparse(z)))
+        zvar <- vArgs[['z']]
+        z <- Data[,zvar]
         timeslice <- unique(z)
     }
     #----data preProcess-----------
-    if (!is.null(y)) yvar <- substr(deparse(y),2,nchar(deparse(y)))
-    if (!is.null(x)) {
-        xvar <- substr(deparse(x),2,nchar(deparse(x)))
-        lvlx <- unique(data[,xvar])
+    if (!is.null(substitute(y))) yvar <- vArgs[['y']]
+        #yvar <- substr(deparse(y),2,nchar(deparse(y)))
+    if (!is.null(substitute(x))) {
+        #xvar <- substr(deparse(x),2,nchar(deparse(x)))
+        xvar <- vArgs[['x']]
+        if (is.factor(data[,xvar])) {
+            lvlx <- levels(data[,xvar])
+        }else if (is.character(data[,xvar])){
+            lvlx <- unique(data[,xvar])
+        }
     }
-    if (!is.null(series)) {
-        svar <- substr(deparse(series),2,nchar(deparse(series)))
+    if (!is.null(substitute(series))) {
+        #svar <- substr(deparse(series),2,nchar(deparse(series)))
+        svar <- vArgs[['series']]
         if (is.factor(data[,svar])){
             lvlseries <- levels(data[,svar])
         }else{
@@ -575,12 +596,18 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     for (var in names(Data)){  # transform all factors to char
         if (is.factor(Data[,var])) Data[,var]<-as.character(Data[,var])
     }
-    if (!is.null(weight)) wvar <- substr(deparse(weight),2,nchar(deparse(weight)))
-    if (!is.null(xcoord)) xcoordvar <- substr(deparse(xcoord),2,nchar(deparse(xcoord)))
-    if (!is.null(x1)) xvar1 <- substr(deparse(x1),2,nchar(deparse(x1)))
-    if (!is.null(xcoord1)) xcoordvar1 <- substr(deparse(xcoord1),2,nchar(deparse(xcoord1)))
-    if (!is.null(ycoord)) ycoordvar <- substr(deparse(ycoord),2,nchar(deparse(ycoord)))
-    if (!is.null(ycoord1)) ycoordvar1 <- substr(deparse(ycoord1),2,nchar(deparse(ycoord1)))
+    if (!is.null(substitute(weight))) #wvar <- substr(deparse(weight),2,nchar(deparse(weight)))
+        wvar <- vArgs[['weight']]
+    if (!is.null(substitute(xcoord))) #xcoordvar <- substr(deparse(xcoord),2,nchar(deparse(xcoord)))
+        xcoordvar <- vArgs[['xcoord']]
+    if (!is.null(substitute(x1))) #xvar1 <- substr(deparse(x1),2,nchar(deparse(x1)))
+        xvar1 <- vArgs[['x1']]
+    if (!is.null(substitute(xcoord1))) #xcoordvar1 <- substr(deparse(xcoord1),2,nchar(deparse(xcoord1)))
+        xcoordvar1 <- vArgs[['xcoord1']]
+    if (!is.null(substitute(ycoord))) #ycoordvar <- substr(deparse(ycoord),2,nchar(deparse(ycoord)))
+        ycoordvar <- vArgs[['ycoord']]
+    if (!is.null(substitute(ycoord1))) #ycoordvar1 <- substr(deparse(ycoord1),2,nchar(deparse(ycoord1)))
+        ycoordvar1 <- vArgs[['ycoord1']]
     if (!is.null(markLinesmooth)) markLine <- markLinesmooth
     
     if (type[1] %in% c('line','linesmooth','scatter','bubble','area','areasmooth',
@@ -766,12 +793,12 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         #-------Tooltip--------------
         if (tooltip){
             lstTooltip <- list(
-                trigger=ifelse(type[1] %in% c('pie','ring','funnel','pyramid','map',
+                trigger = ifelse(type[1] %in% c('pie','ring','funnel','pyramid','map',
                                               'rose','wordcloud','radar','radarfill',
                                               'chord','chordribbon','force','gauge'),
                                'item','axis'),
                 axisPointer = list(
-                    show= T,lineStyle= list(type= 'dashed',width= 1)
+                    show = TRUE,lineStyle = list(type = 'dashed',width = 1)
                 )
             )
             if (inherits(x,c('POSIXlt','POSIXct','Date'))){
@@ -871,13 +898,13 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         
         #------Legend 1------------
         if (is.null(series)){
-            lstLegend= list(show=TRUE, data=as.vector(yvar))
+            lstLegend= list(show=TRUE, data=as.list(yvar))
         }else{
             lstLegend= list(show=TRUE, data=lvlseries)
         }
         if (length(legend)==1){
             if (legend==FALSE){
-                lstLegend= list(show=FALSE)
+                lstLegend[['show']] <- FALSE
             }
         }
         lstLegend[['x']] <- vecPos(pos[['legend']])[1]
@@ -1225,7 +1252,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         if (type[1] %in% c('scatter','bubble')){
             if (is.null(series)){
                 lstSeries[[1]] <- list(
-                    type='scatter',
+                    type='scatter', name=xvar,
                     data=as.matrix(data[,c(xvar,yvar)]),
                     large=ifelse(nrow(data)>2000,TRUE,FALSE)
                 )
@@ -1239,14 +1266,14 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 }else{
                     for (i in 1:ifelse(is.null(series),1,length(lvlseries))){
                         lstSeries[[i]] <- list(
-                            type='scatter',
+                            type='scatter',name=lvlseries[i],
                             data=as.matrix(data[data[,svar]==
                                                     lvlseries[i],
                                                 c(xvar,yvar)]),
                             large=ifelse(nrow(data)>2000,TRUE,FALSE)
                         )
                         if (length(lvlseries)>1){
-                            lstSeries[[i]][['name']] <- as.vector(lvlseries[i])
+                            #lstSeries[[i]][['name']] <- as.vector(lvlseries[i])
                             if (lvlseries[i] %in% xAxis1[['series']]){
                                 lstSeries[[i]][['xAxisIndex']] <-1
                             }
@@ -1342,7 +1369,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         #print(data[,yvar])
         if (is.null(series)){ # single serie
             lstSeries[[1]] <- list(
-                type='line',
+                type='line',name=xvar,
                 data=data[,yvar]
             )
             if (type[1] %in% c("area",'areasmooth')){
@@ -1647,7 +1674,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                           orient=vecPos(pos[['legend']])[3])
         if (is.null(series)){
             lvlseries <- as.vector(unique(x1))
-            lstLegend[['data']] <- as.vector(unique(x1))
+            lstLegend[['data']] <- list(unique(x1))
         }else{
             lstLegend[['data']] <- c(as.vector(unique(x1)),'',lvlseries)
         }
@@ -1680,7 +1707,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     }else{              # the rest charts
         if (is.null(series)){
             lstSeries[[1]] <- list(
-                type=type[1],
+                type=type[1],name=xvar,
                 data=data[,yvar]
             )
             if (type[1]=='histogram'){
@@ -1718,23 +1745,24 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         }
     }
         
-        #-------markLine-----------------
-        if (!is.null(markLine)){
-            if (!is.null(z)) if (ncol(markLine) %in% c(5,9))
-                markLine <- as.matrix(MarkLine[as.character(MarkLine[,ncol(MarkLine)]) 
-                                               == as.character(timeslice[t]),
-                                     1:(ncol(MarkLine)-1)])
-            if (! is.data.frame(markLine) & ! is.matrix(markLine)){
-                stop("markLine should be a data.frame or a matrix.")
-                if (!ncol(markLine) %in% c(4,8)) {
-                    stop("markLine should be of 4 or 8 columns")
-                }
+    #-------markLine-----------------
+    if (!is.null(MarkLine)){
+        if (!is.null(z)) if (ncol(MarkLine) %in% c(5,9))
+            markLine <- as.matrix(MarkLine[as.character(MarkLine[,ncol(MarkLine)]) 
+                                           == as.character(timeslice[t]),
+                                 1:(ncol(MarkLine)-1)])
+        if (! is.data.frame(markLine) & ! is.matrix(markLine)){
+            stop("markLine should be a data.frame or a matrix.")
+            if (!ncol(markLine) %in% c(4,8)) {
+                stop("markLine should be of 4 or 8 columns")
             }
-            markLine <- as.data.frame(markLine,stringsAsFactors=FALSE)
+        }
+        markLine <- as.data.frame(markLine,stringsAsFactors=FALSE)
+        if (nrow(markLine)>0){
             if (ncol(markLine)==8){
                 markLine[,6] <- gsub("^[Mm][Aa][Xx].*$",
-                                     ifelse(is.numeric(x),max(x,na.rm=TRUE),
-                                            length(unique(x))),
+                                     ifelse(is.numeric(x),max(Data[,xvar],na.rm=TRUE),
+                                            length(unique(Data[,xvar]))),
                                      markLine[,6])
                 for (col in 3:7) markLine[,col]<-as.numeric(markLine[,col])
             }
@@ -1912,6 +1940,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 }
             }
         }
+    }
         
         #-------markPoint-----------------
         if (!is.null(markPoint)){
@@ -2071,7 +2100,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 if (length(lstLegend[['data']][-legendShow]) >0){
                     lstLegend[['selected']] <- list()
                     for (legName in lstLegend[['data']][-legendShow]){
-                        lstLegend[['selected']][[legName]] <- F
+                        lstLegend[['selected']][[legName]] <- FALSE
                     }
                 }
             }
@@ -2170,7 +2199,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             if (!is.null(lstdataZoom)) chartobj[['dataZoom']] <- lstdataZoom
             if (!is.null(lstdataRange)) chartobj[['dataRange']] <- lstdataRange
             #if (!is.null(lstSeries[[1]][['name']]))   chartobj[['legend']] <- lstLegend
-            if (!is.null(lvlseries))   chartobj[['legend']] <- lstLegend
+            if (!is.null(lstLegend))   chartobj[['legend']] <- lstLegend
             if (type[1] %in% c('scatter','bubble','line','bar','linesmooth','histogram',
                                'area','areasmooth','k')){
                 chartobj[['xAxis']] <- lstXAxis
@@ -2210,13 +2239,14 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                     chartobj[[t]][['xAxis']] <- lstXAxis
                     chartobj[[t]][['yAxis']] <- lstYAxis
                 }else if(type[1] %in% c('map')){
-                    chartobj[[t]][['roamController']] <- list(show=TRUE,
-                                                              mapTypeControl=list(),
-                                                              width=60, height=90,
-                                                              x=vecPos(pos[['roam']])[1],
-                                                              y=vecPos(pos[['roam']])[2]
+                    chartobj[[t]][['roamController']] <- 
+                        list(show=TRUE,
+                              mapTypeControl=list(),
+                              width=60, height=90,
+                              x=vecPos(pos[['roam']])[1],
+                              y=vecPos(pos[['roam']])[2]
                     )
-                    chartobj[[t]][['roamController']][['mapTypeControl']][[mapType]] <- T
+                    chartobj[[t]][['roamController']][['mapTypeControl']][[mapType]] <- TRUE
                 }else if (type[1] %in% c('radar','radarfill')){
                     chartobj[[t]][['polar']] <- lstPolar
                 }
