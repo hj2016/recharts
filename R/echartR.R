@@ -516,12 +516,12 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                   title=NULL, subtitle=NULL, title_url=NULL, subtitle_url=NULL,
                   symbolList=NULL, dataZoom=NULL, 
                   dataRange=NULL, splitNumber=NULL, dataRangePalette=NULL,
-                  xAxis=list(lab=NULL,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0), xlab=NULL,
-                  yAxis=list(lab=NULL,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0), ylab=NULL,
-                  xAxis1=list(lab=NULL,series=NULL,reverse=FALSE,color=NULL,splitLine=TRUE,
-                              banded=FALSE,rotate=0), xlab1=NULL, 
-                  yAxis1=list(lab=NULL,series=NULL,reverse=FALSE,color=NULL,splitLine=TRUE,
-                              banded=FALSE,rotate=0), ylab1=NULL,
+                  xlab=NULL,xAxis=list(lab=xlab,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0), 
+                  ylab=NULL,yAxis=list(lab=ylab,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0), 
+                  xlab1=NULL, xAxis1=list(lab=xlab1,series=NULL,reverse=FALSE,color=NULL,splitLine=TRUE,
+                              banded=FALSE,rotate=0), 
+                  ylab1=NULL,yAxis1=list(lab=ylab1,series=NULL,reverse=FALSE,color=NULL,splitLine=TRUE,
+                              banded=FALSE,rotate=0), 
                   xyflip=FALSE, AxisAtZero=c(FALSE,TRUE), scale=TRUE,
                   palette='aetnagreen', tooltip=TRUE, legend=TRUE, toolbox=c(TRUE,'cn'), 
                   pos=list(title=6, legend=11, toolbox=1, dataZoom=6, 
@@ -612,9 +612,9 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     
     if (type[1] %in% c('line','linesmooth','scatter','bubble','area','areasmooth',
                        'bar')){       # only these charts can use double axes
-        xAxis1 <- mergeList(list(lab=NULL,series=NULL,reverse=FALSE,color=NULL,
+        xAxis1 <- mergeList(list(lab=xlab1,series=NULL,reverse=FALSE,color=NULL,
                                  splitLine=TRUE,banded=FALSE,rotate=0), xAxis1) 
-        yAxis1 <- mergeList(list(lab=NULL,series=NULL,reverse=FALSE,color=NULL,
+        yAxis1 <- mergeList(list(lab=ylab1,series=NULL,reverse=FALSE,color=NULL,
                                  splitLine=TRUE,banded=FALSE,rotate=0), yAxis1) 
         
         for (lstName in c("xAxis1","yAxis1")){
@@ -896,21 +896,6 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             lstToolbox=list(show=FALSE)
         }
         
-        #------Legend 1------------
-        if (is.null(series)){
-            lstLegend= list(show=TRUE, data=as.list(yvar))
-        }else{
-            lstLegend= list(show=TRUE, data=lvlseries)
-        }
-        if (length(legend)==1){
-            if (legend==FALSE){
-                lstLegend[['show']] <- FALSE
-            }
-        }
-        lstLegend[['x']] <- vecPos(pos[['legend']])[1]
-        lstLegend[['y']] <- vecPos(pos[['legend']])[2]
-        lstLegend[['orient']] <- vecPos(pos[['legend']])[3]
-        
         #----------dataZoom----------
         lstdataZoom <- NULL
         
@@ -1051,12 +1036,12 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         if (length(AxisAtZero)==1) AxisAtZero <- rep(AxisAtZero,2)
         AxisAtZero <- as.logical(AxisAtZero)
         for (i in 1:2) if(is.na(AxisAtZero[i])) AxisAtZero[i] <- switch(i,FALSE,TRUE)
-        xAxis <- mergeList(list(lab=NULL,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0),
+        xAxis <- mergeList(list(lab=xlab,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0),
                            xAxis)
-        yAxis <- mergeList(list(lab=NULL,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0),
+        yAxis <- mergeList(list(lab=ylab,color=NULL,splitLine=TRUE,banded=FALSE,rotate=0),
                            yAxis)
-        if (!is.null(xlab)) xAxis[['lab']]<-xlab
-        if (!is.null(ylab)) yAxis[['lab']]<-ylab
+#         if (!is.null(xlab)) xAxis[['lab']]<-xlab
+#         if (!is.null(ylab)) yAxis[['lab']]<-ylab
         if (!is.null(xlab1) & !is.null(xAxis1)) xAxis1[['lab']]<-xlab1
         if (!is.null(ylab1) & !is.null(yAxis1)) yAxis1[['lab']]<-ylab1
         
@@ -1222,6 +1207,22 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         #    }
         #}
         
+        #------Legend 1------------
+        if (is.null(series)){
+            lstLegend= list(show=TRUE, data=as.list(ifelse(is.null(xAxis$lab),
+                                                           xvar,xAxis$lab)))
+        }else{
+            lstLegend= list(show=TRUE, data=lvlseries)
+        }
+        if (length(legend)==1){
+            if (legend==FALSE){
+                lstLegend[['show']] <- FALSE
+            }
+        }
+        lstLegend[['x']] <- vecPos(pos[['legend']])[1]
+        lstLegend[['y']] <- vecPos(pos[['legend']])[2]
+        lstLegend[['orient']] <- vecPos(pos[['legend']])[3]
+        
         #----------polar---------------
         if (type[1] %in% c('radar','radarfill')){
             x <- factor(x,levels=unique(x))
@@ -1252,7 +1253,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         if (type[1] %in% c('scatter','bubble')){
             if (is.null(series)){
                 lstSeries[[1]] <- list(
-                    type='scatter', name=xvar,
+                    type='scatter', name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
                     data=as.matrix(data[,c(xvar,yvar)]),
                     large=ifelse(nrow(data)>2000,TRUE,FALSE)
                 )
@@ -1347,7 +1348,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         }
     }else if (type[1] %in% c('wordcloud')){
         lstSeries[[1]] <- list(
-            name=yvar,
+            name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
             type='wordCloud',
             size=c('80%','80%'),
             textRotation=c(0,45,90,-45),
@@ -1369,7 +1370,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         #print(data[,yvar])
         if (is.null(series)){ # single serie
             lstSeries[[1]] <- list(
-                type='line',name=xvar,
+                type='line',name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
                 data=data[,yvar]
             )
             if (type[1] %in% c("area",'areasmooth')){
@@ -1474,7 +1475,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     }else if (type[1] %in% c('radar','radarfill')){
         if (is.null(series)){
             lstSeries[[1]] <- list(
-                name=yvar,
+                name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
                 type='radar',
                 data=list(value=data[,yvar],
                           name=yvar)
@@ -1490,7 +1491,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             }
         }else{
             lstSeries[[1]] <- list(
-                name=yvar,
+                name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
                 type='radar',
                 data=list()
             )
@@ -1594,7 +1595,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             lstSeries[[i]] <- list(
                 type='chord',sort='ascending',sortSub='descending',
                 itemStyle=list(normal=list(label=list(
-                    rotate=ifelse(xAxis[['rotate']]!=0,T,F))))
+                    rotate=ifelse(xAxis[['rotate']]!=0,TRUE,FALSE))))
             )
             if (!is.null(series)){ 
                 lstSeries[[i]][['name']] <- lvlseries[i]
@@ -1707,7 +1708,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     }else{              # the rest charts
         if (is.null(series)){
             lstSeries[[1]] <- list(
-                type=type[1],name=xvar,
+                type=type[1],name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
                 data=data[,yvar]
             )
             if (type[1]=='histogram'){
@@ -1748,9 +1749,9 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     #-------markLine-----------------
     if (!is.null(MarkLine)){
         if (!is.null(z)) if (ncol(MarkLine) %in% c(5,9))
-            markLine <- as.matrix(MarkLine[as.character(MarkLine[,ncol(MarkLine)]) 
-                                           == as.character(timeslice[t]),
-                                 1:(ncol(MarkLine)-1)])
+            markLine <- matrix(MarkLine[which(as.character(MarkLine[,ncol(MarkLine)]) 
+                                           == as.character(timeslice[t])),
+                                 1:(ncol(MarkLine)-1)],ncol=ncol(MarkLine)-1)
         if (! is.data.frame(markLine) & ! is.matrix(markLine)){
             stop("markLine should be a data.frame or a matrix.")
             if (!ncol(markLine) %in% c(4,8)) {
@@ -1761,8 +1762,8 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         if (nrow(markLine)>0){
             if (ncol(markLine)==8){
                 markLine[,6] <- gsub("^[Mm][Aa][Xx].*$",
-                                     ifelse(is.numeric(x),max(Data[,xvar],na.rm=TRUE),
-                                            length(unique(Data[,xvar]))),
+                                     ifelse(is.numeric(x),max(Data[,xvar]*2,na.rm=TRUE),
+                                            length(unique(Data[,xvar]))+1),
                                      markLine[,6])
                 for (col in 3:7) markLine[,col]<-as.numeric(markLine[,col])
             }
@@ -1794,7 +1795,8 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                     sermarkLine[i,2] <- length(lstSeries)+1
                     lstSeries[[sermarkLine[i,2]]] <- list(
                         name=as.character(sermarkLine[i,1]),
-                        type="scatter",
+                        type="line",symbol='none',
+                        itemStyle=list(normal=list(lineStyle=list(type='none'))),
                         data=vector(mode='numeric')
                     )
                     if (ncol(markLine)==8){
@@ -1945,9 +1947,9 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         #-------markPoint-----------------
         if (!is.null(markPoint)){
             if (!is.null(z)) if (ncol(markPoint) %in% c(5,7))
-                markPoint <- as.matrix(MarkPoint[as.character(MarkPoint[,ncol(MarkPoint)]) 
-                                                 == as.character(timeslice[t]),
-                                       1:(ncol(MarkPoint)-1)])
+                markPoint <- as.matrix(MarkPoint[which(as.character(MarkPoint[,ncol(MarkPoint)]) 
+                                                 == as.character(timeslice[t])),
+                                       1:(ncol(MarkPoint)-1)],ncol=ncol(MarkPoint)-1)
                 
             if (! is.data.frame(markPoint) & ! is.matrix(markPoint)){
                 stop("markPoint should be a data.frame or a matrix.")
@@ -2228,12 +2230,12 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 if (!is.null(lstbackgroundColor)) chartobj[[t]][['backgroundColor']] <- 
                         lstbackgroundColor
                 if (!is.null(lstColor)) chartobj[[t]][['color']] <- lstColor
-                if (try(exists("lstGrid"),T)) chartobj[[t]][['grid']] <- lstGrid
+                if (try(exists("lstGrid"),TRUE)) chartobj[[t]][['grid']] <- lstGrid
                 if (!is.null(lstSymbol)) chartobj[[t]][['symbolList']] <- lstSymbol
                 if (!is.null(lstdataZoom)) chartobj[[t]][['dataZoom']] <- lstdataZoom
                 if (!is.null(lstdataRange)) chartobj[[t]][['dataRange']] <- lstdataRange
                 #if (!is.null(lstSeries[[1]][['name']]))   chartobj[['legend']] <- lstLegend
-                if (!is.null(lvlseries))  chartobj[[t]][['legend']] <- lstLegend
+                if (!is.null(lstLegend))  chartobj[[t]][['legend']] <- lstLegend
                 if (type[1] %in% c('scatter','bubble','line','bar','linesmooth','histogram',
                                    'area','areasmooth')){
                     chartobj[[t]][['xAxis']] <- lstXAxis
