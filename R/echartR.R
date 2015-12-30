@@ -546,7 +546,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
     loadpkg("plyr")
     loadpkg("reshape2")
     loadpkg("recharts","yihui/recharts")
-    
+
     #-----transform var to class(name)-----------
     x <- substitute(x); y <- substitute(y); z <- substitute(z); x1<- substitute(x1)
     series <- substitute(series); weight <- substitute(weight)
@@ -1057,21 +1057,25 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                               ifelse(!is.numeric(x),'category','value')),
                 scale = scale)
             if (tmpXAxis[['type']]=='category'){
-                tmpXAxis[['data']] <- unique(as.character(x))
+                if (length(unique(as.character(x)))==1){
+                    tmpXAxis[['data']] <- list(unique(as.character(x)))
+                }else{
+                    tmpXAxis[['data']] <- unique(as.character(x))
+                }
             }else{
                 if (min(x,na.rm=TRUE)>0 & AxisAtZero[1]) tmpXAxis[['min']] <- 0
             }
             if (type[1] %in% c('line','linesmooth','area','areasmooth')){
-                tmpXAxis[['boundaryGap']] <- F
+                tmpXAxis[['boundaryGap']] <- FALSE
             }else if (type[1] %in% c('k')){
                 tmpXAxis[['axisTick']] <- list(onGap=FALSE)
             }else if (type[1]=='histogram'){
                 tmpXAxis[['min']] <- min(hist_def$breaks)
                 tmpXAxis[['max']] <- max(hist_def$breaks)
             }
+            tmpXAxis[['axisLabel']] <- list(interval=0)
             if (!is.null(varXAxis[['reverse']])){
                 if (varXAxis[['reverse']]) {
-                    if (is.null(tmpXAxis[['axisLabel']])) tmpXAxis[['axisLabel']]<-list()
                     tmpXAxis[['axisLabel']][['formatter']] <- JS('function(v){return -v;}')
                 }
             }
@@ -1114,7 +1118,11 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 type = 'value',
                 scale = scale
             )
-            if (min(y,na.rm=TRUE)>0 & AxisAtZero[2]) tmpYAxis[['min']] <- 0
+            if (min(y,na.rm=TRUE)>0 && AxisAtZero[2]) tmpYAxis[['min']] <- 0
+            if (max(y,na.rm=TRUE)==1 && min(y,na.rm=TRUE)>=0) {
+                tmpYAxis[['max']] <- 1
+                tmpYAxis[['min']] <- 0
+            }
             
             if (!is.null(varYAxis[['reverse']])){
                 if (varYAxis[['reverse']]) {
@@ -1390,8 +1398,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 lstSeries[[i]] <- list(
                     name=as.vector(lvlseries[i]),
                     type='line',
-                    data=data[data[,svar]==lvlseries[i],
-                              yvar]
+                    data= data[data[,svar]==lvlseries[i],yvar]
                 )
                 if (lvlseries[i] %in% xAxis1[['series']]){
                     lstSeries[[i]][['xAxisIndex']] <-1
@@ -1423,8 +1430,8 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             }else{
                 dset <- data[data[,svar]==lvlseries[i],]
             }
-            dset <- dcast(dset,eval(parse(text=paste(xvar,"~",xvar1))),
-                          value.var=yvar,sum)
+            # dset <- dcast(dset,as.formula(paste(xvar,"~",xvar1)),sum,value.var=yvar)
+            dset <- dcast(dset,as.formula(paste(xvar,"~",xvar1)),value.var=yvar)
             dset[,xvar] <- factor(as.character(dset[,xvar]),levels=lvlx)
             dset <- dset[order(dset[,xvar]),]
             lstSeries[[i]] <- 
@@ -1705,12 +1712,17 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                 weight=dtlink[i,'y'],name=dtlink[i,'relation']
             )
         }
-    }else{              # the rest charts
+    }else{              # the rest charts: bar, column, scatter, hist
         if (is.null(series)){
             lstSeries[[1]] <- list(
                 type=type[1],name=ifelse(is.null(xAxis$lab),xvar,xAxis$lab),
-                data=data[,yvar]
+                data=as.vector(data[,yvar])
             )
+            if (length(data[,yvar])==1){
+                lstSeries[[1]][['data']] <- list(data[,yvar])
+            }else{
+                lstSeries[[1]][['data']] <- data[,yvar]
+            }
             if (type[1]=='histogram'){
                 lstSeries[[1]][['type']] <- 'bar'
                 lstSeries[[1]][['data']] <- as.matrix(data[,c(xvar,yvar,xvar1)])
@@ -1725,9 +1737,13 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             for (i in 1:ifelse(is.null(series),1,length(lvlseries))){
                 lstSeries[[i]] <- list(
                     name=as.vector(lvlseries[i]),
-                    type=type[1],
-                    data=data[data[,svar]==lvlseries[i],yvar]
+                    type=type[1]
                 )
+                if (length(data[data[,svar]==lvlseries[i],yvar])==1){
+                    lstSeries[[i]]$data <- list(data[data[,svar]==lvlseries[i],yvar])
+                }else{
+                    lstSeries[[i]]$data <- data[data[,svar]==lvlseries[i],yvar]
+                }
                 if (stack){
                     lstSeries[[i]][['stack']] <- 'Stack'
                 }
@@ -1804,7 +1820,8 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                             lstSeries[[sermarkLine[i,2]]][['data']]<-
                                 rep(markLine[markLine[,1]==
                                                  sermarkLine[i,1],3],
-                                    length(lstXAxis[['data']]))
+                                    ifelse(length(lstXAxis[['data']])==1,2,
+                                           length(lstXAxis[['data']])))
                         }else{
                             lstSeries[[sermarkLine[i,2]]][['data']]<-
                                 as.matrix(markLine[markLine[,1]==
@@ -1837,7 +1854,7 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
             for (i in 1:nrow(markLine)){  # loop over markLine
                 if (ncol(markLine) %in% c(9)){ # full form
                     serIdx <- markLine[i,9]
-                    if (serIdx==1 | serIdx<=length(lstSeries)){
+                    if (serIdx==1 || serIdx<=length(lstSeries)){
                         nLines <- length(lstSeries[[serIdx]][['markLine']][['data']])
                         lstSeries[[serIdx]][['markLine']][['data']][[nLines+1]] <-
                             list(list(name=ifelse(is.na(markLine[i,2]),
@@ -1899,9 +1916,9 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
                                 nLines <- length(lstSeries[[serIdx]][['markLine']][['data']])
                                 lstSeries[[serIdx]][['markLine']][['data']][[nLines+1]] <-
                                     list(name=ifelse(is.na(markLine[i,2]),
-                                                     tolower(markLine[i,3]),
-                                                     markLine[i,2]),
-                                         type=tolower(markLine[i,3]))
+                                                     tolower(as.character(markLine[i,3])),
+                                                     as.character(markLine[i,2])),
+                                         type=tolower(as.character(markLine[i,3])))
                             }
                         }else if (type[1] %in% c('bubble','scatter') & 
                                   tolower(markLine[i,3]) == 'lm'){
@@ -2259,12 +2276,11 @@ echartR<-function(data, x=NULL, y, z=NULL, series=NULL, weight=NULL,
         }# loop end over z
     #----------Finally plot it---------
     if (!is.null(z)) {
-        chartObj <- list(timeline=lstTimeline,options=chartobj)
+        output <- echart(list(timeline=lstTimeline,options=chartobj))
     }else{
-        chartObj <- chartobj
+        output <- echart(chartobj)
     }
-    output <- echart(chartObj)
     if (!is.null(theme$width)) if (is.numeric(theme$width)) output$width <- theme$width
     if (!is.null(theme$height)) if (is.numeric(theme$height)) output$height <- theme$height
-    output
+    if (all(is.na(Data[,yvar]))) return('') else return(output)
 }
